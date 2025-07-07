@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparador de Transportes</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #005a87, #0089ca, #00b4b3);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(90deg, #003a5d, #006494);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        header::before {
+            content: "";
+            position: absolute;
+            top: -50px;
+            left: -50px;
+            width: 150px;
+            height: 150px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M20,20 Q40,5 50,30 T80,20" stroke="rgba(255,255,255,0.1)" fill="none" stroke-width="2"/></svg>');
+            opacity: 0.3;
+        }
+        
+        header h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        header p {
+            font-size: 1.2rem;
+            max-width: 700px;
+            margin: 0 auto;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        @media (max-width: 900px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .input-section {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .result-section {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .section-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.6rem;
+            margin-bottom: 25px;
+            color: #003a5d;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e7ff;
+        }
+        
+        .section-title i {
+            background: linear-gradient(135deg, #0089ca, #00b4b3);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #005a87;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #d1d9ff;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            background: white;
+        }
+        
+        .form-group input:focus, .form-group select:focus {
+            border-color: #0089ca;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 137, 202, 0.2);
+        }
+        
+        .suggestions {
+            position: absolute;
+            width: 100%;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 0 0 10px 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+        }
+        
+        .suggestion-item:hover {
+            background-color: #f0f7ff;
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .param-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #e0e7ff;
+        }
+        
+        .param-label {
+            font-weight: 500;
+            color: #005a87;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .param-value {
+            width: 100px;
+            padding: 8px;
+            border: 2px solid #d1d9ff;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+            background: white;
+        }
+        
+        .calculate-btn {
+            background: linear-gradient(90deg, #0089ca, #00b4b3);
+            color: white;
+            border: none;
+            padding: 16px;
+            font-size: 1.1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 137, 202, 0.3);
+        }
+        
+        .calculate-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 20px rgba(0, 137, 202, 0.4);
+        }
+        
+        .calculate-btn:active {
+            transform: translateY(1px);
+        }
+        
+        .result-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .result-item {
+            background: white;
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .result-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .result-item.winner {
+            border-color: #39ac37;
+            background: linear-gradient(to right, rgba(57, 172, 55, 0.05), white);
+        }
+        
+        .result-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8rem;
+            color: white;
+            flex-shrink: 0;
+        }
+        
+        .bus .result-icon { background: linear-gradient(135deg, #ff416c, #ff4b2b); }
+        .uber .result-icon { background: linear-gradient(135deg, #09091a, #3d3d5c); }
+        .uber-moto .result-icon { background: linear-gradient(135deg, #444444, #222222); }
+        .app99 .result-icon { background: linear-gradient(135deg, #ff7e00, #ff4d00); }
+        .indrive .result-icon { background: linear-gradient(135deg, #39ac37, #2d8b2b); }
+        .car .result-icon { background: linear-gradient(135deg, #333333, #666666); }
+        .taxi .result-icon { background: linear-gradient(135deg, #FFD700, #FFA500); }
+        
+        .result-content {
+            flex: 1;
+        }
+        
+        .result-title {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            font-size: 1.3rem;
+            color: #003a5d;
+            margin-bottom: 5px;
+        }
+        
+        .result-details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        @media (max-width: 600px) {
+            .result-details {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .detail-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            color: #005a87;
+        }
+        
+        .result-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #39ac37;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 5px 15px;
+            border-bottom-left-radius: 10px;
+            display: none;
+        }
+        
+        .winner .result-badge {
+            display: block;
+        }
+        
+        .winner-message {
+            background: linear-gradient(135deg, #39ac37, #2d8b2b);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 20px;
+            font-weight: 500;
+            box-shadow: 0 5px 15px rgba(57, 172, 55, 0.3);
+        }
+        
+        .winner-message span {
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+        
+        #map {
+            height: 300px;
+            border-radius: 15px;
+            margin-top: 20px;
+            z-index: 1;
+        }
+        
+        footer {
+            background: linear-gradient(90deg, #003a5d, #006494);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        .instructions {
+            background: #e6f7ff;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 25px;
+            border-left: 4px solid #0089ca;
+        }
+        
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #003a5d;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+            color: #005a87;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            color: #005a87;
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .map-info {
+            background: #e6f7ff;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            text-align: center;
+            color: #005a87;
+        }
+        
+        .salvador-locations {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .location-tag {
+            background: #e0e7ff;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .location-tag:hover {
+            background: #0089ca;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-route"></i> Comparador de Transportes</h1>
+            <p>Calcule o melhor meio de transporte para sua viagem considerando custo, tempo e distância</p>
+        </header>
+        
+        <div class="content">
+            <div class="input-section">
+                <h2 class="section-title"><i class="fas fa-map-marker-alt"></i> Informe seu trajeto</h2>
+                
+                <div class="form-group">
+                    <label for="origin"><i class="fas fa-location-dot"></i> Origem</label>
+                    <input type="text" id="origin" placeholder="Ex: Pelourinho, Salvador" value="Pelourinho, Salvador">
+                    <div class="suggestions" id="origin-suggestions"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="destination"><i class="fas fa-flag"></i> Destino</label>
+                    <input type="text" id="destination" placeholder="Ex: Farol da Barra, Salvador" value="Farol da Barra, Salvador">
+                    <div class="suggestions" id="destination-suggestions"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="distance"><i class="fas fa-road"></i> Distância (km)</label>
+                    <input type="number" id="distance" placeholder="Clique em Calcular Rota" min="0.1" step="0.1" value="6.5" readonly>
+                </div>
+                
+                <div class="salvador-locations">
+                    <div class="location-tag" data-location="Pelourinho, Salvador">Pelourinho</div>
+                    <div class="location-tag" data-location="Farol da Barra, Salvador">Farol da Barra</div>
+                    <div class="location-tag" data-location="Praia de Itapuã, Salvador">Itapuã</div>
+                    <div class="location-tag" data-location="Shopping Salvador, Salvador">Shopping Salvador</div>
+                    <div class="location-tag" data-location="Mercado Modelo, Salvador">Mercado Modelo</div>
+                    <div class="location-tag" data-location="Aeroporto de Salvador, Salvador">Aeroporto</div>
+                    <div class="location-tag" data-location="Condomínio Brisas, Salvador">Condomínio Brisas</div>
+                    <div class="location-tag" data-location="Condomínio Aldeia das Pedras, Salvador">Aldeia das Pedras</div>
+                </div>
+                
+                <button id="route-btn" class="calculate-btn">
+                    <i class="fas fa-route"></i> Calcular Rota
+                </button>
+                
+                <div class="loading" id="route-loading">
+                    <i class="fas fa-spinner"></i> Calculando rota...
+                </div>
+                
+                <h2 class="section-title"><i class="fas fa-sliders-h"></i> Parâmetros de Custo</h2>
+                
+                <div class="param-row">
+                    <div class="param-label">
+                        <i class="fas fa-gas-pump"></i> Preço da gasolina (R$/L)
+                    </div>
+                    <input type="number" class="param-value" id="fuel-price" value="5.89" min="1" step="0.01">
+                </div>
+                
+                <div class="param-row">
+                    <div class="param-label">
+                        <i class="fas fa-bus"></i> Tarifa de ônibus (R$)
+                    </div>
+                    <input type="number" class="param-value" id="bus-fare" value="4.30" min="1" step="0.01">
+                </div>
+                
+                <div class="param-row">
+                    <div class="param-label">
+                        <i class="fas fa-car"></i> Consumo carro (km/L)
+                    </div>
+                    <input type="number" class="param-value" id="car-consumption" value="10" min="1" step="0.1">
+                </div>
+                
+                <div class="param-row">
+                    <div class="param-label">
+                        <i class="fas fa-motorcycle"></i> Velocidade média moto (km/h)
+                    </div>
+                    <input type="number" class="param-value" id="moto-speed" value="30" min="1" step="0.1">
+                </div>
+                
+                <button class="calculate-btn" id="calculate-btn">
+                    <i class="fas fa-calculator"></i> Calcular Melhor Opção
+                </button>
+                
+                <div class="instructions">
+                    <h3><i class="fas fa-info-circle"></i> Como usar:</h3>
+                    <ul>
+                        <li>Informe o local de origem e destino</li>
+                        <li>Clique em "Calcular Rota" para ver o trajeto no mapa</li>
+                        <li>Ajuste os parâmetros de custo conforme necessário</li>
+                        <li>Clique em "Calcular Melhor Opção" para comparar</li>
+                        <li>O sistema mostrará a opção mais econômica destacada em verde</li>
+                    </ul>
+                </div>
+                
+                <div class="map-info">
+                    <i class="fas fa-map"></i> Mapa e rotas fornecidos por OpenStreetMap - Gratuito e sem necessidade de chave API
+                </div>
+            </div>
+            
+            <div class="result-section">
+                <h2 class="section-title"><i class="fas fa-chart-line"></i> Resultados da Comparação</h2>
+                
+                <div class="result-container" id="results">
+                    <div class="result-item bus">
+                        <div class="result-icon">
+                            <i class="fas fa-bus"></i>
+                        </div>
+                        <div class="result-content">
+                            <div class="result-title">Ônibus</div>
+                            <div class="result-details">
+                                <div class="detail-item">
+                                    <div class="detail-label">Distância</div>
+                                    <div class="detail-value" id="bus-distance">8.2 km</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Tempo Estimado</div>
+                                    <div class="detail-value" id="bus-time">40 min</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Custo Total</div>
+                                    <div class="detail-value" id="bus-cost">R$ 4.30</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="result-badge">Melhor Custo</div>
+                    </div>
+                    
+                    <div class="result-item uber">
+                        <div class="result-icon">
+                            <i class="fab fa-uber"></i>
+                        </div>
+                        <div class="result-content">
+                            <div class="result-title">Uber</div>
+                            <div class="result-details">
+                                <div class="detail-item">
+                                    <div class="detail-label">Distância</div>
+                                    <div class="detail-value" id="uber-distance">6.5 km</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Tempo Estimado</div>
+                                    <div class="detail-value" id="uber-time">18 min</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Custo Total</div>
+                                    <div class="detail-value" id="uber-cost">R$ 16.90</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="result-badge">Melhor Custo</div>
+                    </div>
+                    
+                    <div class="result-item uber-moto">
+                        <div class="result-icon">
+                            <i class="fas fa-motorcycle"></i>
+                        </div>
+                        <div class="result-content">
+                            <div class="result-title">Uber Moto</div>
+                            <div class="result-details">
+                                <div class="detail-item">
+                                    <div class="detail-label">Distância</div>
+                                    <div class="detail-value" id="uber-moto-distance">6.5 km</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Tempo Estimado</div>
+                                    <div class="detail-value" id="uber-moto-time">15 min</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Custo Total</div>
+                                    <div class="detail-value" id="uber-moto-cost">R$ 10.50</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="result-badge">Melhor Custo</div>
+                    </div>
+                    
+                    <div class="result-item app99">
+                        <div class="result-icon">99</div>
+                        <div class="result-content">
+                            <div class="result-title">99 Táxi</div>
+                            <div class="result-details">
+                                <div class="detail-item">
+                                    <div class="detail-label">Distância</div>
+                                    <div class="detail-value" id="app99-distance">6.5 km</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Tempo Estimado</div>
+                                    <div class="detail-value" id="app99-time">20 min</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Custo Total</div>
+                                    <div class="detail-value" id="app99-cost">R$ 17.50</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="result-badge">Melhor Custo</div>
+                    </div>
+                    
+                    <div class="result-item indrive">
+                        <div class="result-icon">
+                            <i class="fas fa-car"></i>
+                        </div>
+                        <div class="result-content">
+                            <div class="result-title">inDrive</div>
+                            <div class="result-details">
+                                <div class="detail-item">
+                                    <div class="detail-label">Distância</div>
+                                    <div class="detail-value" id="indrive-distance">6.5 km</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Tempo Estimado</div>
+                                    <div class="detail-value" id="indrive-time">19 min</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Custo Total</div>
+                                    <div class="detail-value" id="indrive-cost">R$ 15.20</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="result-badge">Melhor Custo</div>
+                    </div>
+                    
+                    <div class="result-item car">
+                        <div class="result-icon">
+                            <i class="fas fa-car-side"></i>
+                        </div>
+                        <div class="result-content">
+                            <div class="result-title">Carro Particular</div>
+                            <div class="result-details">
+                                <div class="detail-item">
+                                    <div class="detail-label">Distância</div>
+                                    <div class="detail-value" id="car-distance">6.5 km</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Tempo Estimado</div>
+                                    <div class="detail-value" id="car-time">17 min</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Custo Total</div>
+                                    <div class="detail-value" id="car-cost">R$ 4.78</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="result-badge">Melhor Custo</div>
+                    </div>
+                    
+                    <div class="result-item taxi">
+                        <div class="result-icon">
+                            <i class="fas fa-taxi"></i>
+                        </div>
+                        <div class="result-content">
+                            <div class="result-title">Táxi Convencional</div>
+                            <div class="result-details">
+                                <div class="detail-item">
+                                    <div class="detail-label">Distância</div>
+                                    <div class="detail-value" id="taxi-distance">6.5 km</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Tempo Estimado</div>
+                                    <div class="detail-value" id="taxi-time">18 min</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Custo Total</div>
+                                    <div class="detail-value" id="taxi-cost">R$ 25.00</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="result-badge">Melhor Custo</div>
+                    </div>
+                    
+                    <div class="winner-message" id="winner-message">
+                        A opção mais econômica é: <span id="winner-name">Ônibus</span> com <span id="winner-cost">R$ 4.30</span>
+                    </div>
+                </div>
+                
+                <div id="map"></div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Comparador de Transportes &copy; 2025 Luidil Góis | Economize tempo e dinheiro em seus deslocamentos</p>
+        </footer>
+    </div>
+    
+    <!-- Biblioteca Leaflet para OpenStreetMap -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Biblioteca para geocoding (Nominatim) -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-control-geocoder@2.4.0/dist/Control.Geocoder.min.js"></script>
+    
+    <script>
+        // Variáveis globais
+        let map;
+        let originMarker, destinationMarker;
+        let routeLayer;
+        let geocoder;
+        let currentDistance = 6.5; // Distância padrão em km
+        
+        // Lista de locais populares em Salvador
+        const salvadorLocations = [
+            "Pelourinho, Salvador", 
+            "Farol da Barra, Salvador",
+            "Praia de Itapuã, Salvador",
+            "Shopping Salvador, Salvador",
+            "Mercado Modelo, Salvador",
+            "Aeroporto de Salvador, Salvador",
+            "Condomínio Brisas, Salvador",
+            "Condomínio Aldeia das Pedras, Salvador",
+            "Estádio Fonte Nova, Salvador",
+            "Parque Costa Azul, Salvador",
+            "Parque da Cidade, Salvador",
+            "Lagoa do Abaeté, Salvador",
+            "Elevador Lacerda, Salvador",
+            "Praia do Porto da Barra, Salvador",
+            "Rio Vermelho, Salvador",
+            "Pituba, Salvador",
+            "Costa Azul, Salvador",
+            "Stella Maris, Salvador"
+        ];
+        
+        // Inicializar o mapa
+        function initMap() {
+            // Configurar o mapa
+            map = L.map('map').setView([-12.9722, -38.5014], 13);
+            
+            // Adicionar camada do OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            // Configurar geocoder para priorizar Salvador
+            geocoder = L.Control.Geocoder.nominatim({
+                geocodingQueryParams: {
+                    viewbox: '-38.5327,-13.0100,-38.4084,-12.9714', // Coordenadas de Salvador
+                    bounded: 1,
+                    countrycodes: 'br'
+                }
+            });
+            
+            // Adicionar marcadores padrão
+            originMarker = L.marker([-12.9714, -38.5084]).addTo(map)
+                .bindPopup('Pelourinho, Salvador')
+                .openPopup();
+                
+            destinationMarker = L.marker([-13.0100, -38.5327]).addTo(map)
+                .bindPopup('Farol da Barra, Salvador');
+            
+            // Desenhar rota inicial
+            drawRoute([-12.9714, -38.5084], [-13.0100, -38.5327]);
+        }
+        
+        // Função para desenhar rota usando OSRM
+        function drawRoute(originCoords, destinationCoords) {
+            // Remover rota anterior se existir
+            if (routeLayer) {
+                map.removeLayer(routeLayer);
+            }
+            
+            // Formatar coordenadas para a API
+            const origin = `${originCoords[1]},${originCoords[0]}`;
+            const destination = `${destinationCoords[1]},${destinationCoords[0]}`;
+            
+            // URL da API de roteamento OSRM
+            const url = `https://router.project-osrm.org/route/v1/driving/${origin};${destination}?overview=full&geometries=geojson`;
+            
+            // Mostrar loading
+            document.getElementById('route-loading').style.display = 'block';
+            
+            // Fazer requisição à API
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    // Ocultar loading
+                    document.getElementById('route-loading').style.display = 'none';
+                    
+                    if (data.routes && data.routes.length > 0) {
+                        const route = data.routes[0];
+                        
+                        // Atualizar distância (convertendo metros para km)
+                        currentDistance = (route.distance / 1000).toFixed(2);
+                        document.getElementById('distance').value = currentDistance;
+                        
+                        // Criar camada da rota
+                        routeLayer = L.geoJSON(route.geometry, {
+                            style: {
+                                color: '#006494',
+                                weight: 5,
+                                opacity: 0.8
+                            }
+                        }).addTo(map);
+                        
+                        // Ajustar o mapa para mostrar toda a rota
+                        map.fitBounds(routeLayer.getBounds());
+                    } else {
+                        alert('Não foi possível calcular a rota. Tente endereços mais específicos.');
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('route-loading').style.display = 'none';
+                    console.error('Erro ao calcular rota:', error);
+                    alert('Erro ao calcular rota. Verifique sua conexão ou tente novamente.');
+                });
+        }
+        
+        // Função para geocodificar um endereço
+        function geocodeAddress(address, callback) {
+            geocoder.geocode(address, function(results) {
+                if (results && results.length > 0) {
+                    const location = results[0].center;
+                    callback([location.lat, location.lng]);
+                } else {
+                    alert('Endereço não encontrado: ' + address);
+                    callback(null);
+                }
+            });
+        }
+        
+        // Evento para o botão de rota
+        document.getElementById('route-btn').addEventListener('click', function() {
+            const originAddress = document.getElementById('origin').value;
+            const destinationAddress = document.getElementById('destination').value;
+            
+            if (!originAddress || !destinationAddress) {
+                alert('Por favor, informe origem e destino.');
+                return;
+            }
+            
+            // Geocodificar origem
+            geocodeAddress(originAddress, function(originCoords) {
+                if (!originCoords) return;
+                
+                // Atualizar marcador de origem
+                if (originMarker) map.removeLayer(originMarker);
+                originMarker = L.marker(originCoords).addTo(map)
+                    .bindPopup(originAddress)
+                    .openPopup();
+                
+                // Geocodificar destino
+                geocodeAddress(destinationAddress, function(destinationCoords) {
+                    if (!destinationCoords) return;
+                    
+                    // Atualizar marcador de destino
+                    if (destinationMarker) map.removeLayer(destinationMarker);
+                    destinationMarker = L.marker(destinationCoords).addTo(map)
+                        .bindPopup(destinationAddress);
+                    
+                    // Desenhar nova rota
+                    drawRoute(originCoords, destinationCoords);
+                });
+            });
+        });
+        
+        // Função para calcular os transportes
+        function calculateTransport() {
+            const distance = parseFloat(document.getElementById('distance').value);
+            const fuelPrice = parseFloat(document.getElementById('fuel-price').value);
+            const busFare = parseFloat(document.getElementById('bus-fare').value);
+            const carConsumption = parseFloat(document.getElementById('car-consumption').value);
+            const motoSpeed = parseFloat(document.getElementById('moto-speed').value);
+            
+            if (isNaN(distance)) {
+                alert('Por favor, informe uma distância válida.');
+                return;
+            }
+            
+            // Calcular valores para cada transporte
+            const transportData = {
+                bus: {
+                    distance: distance * 1.26, // Considera rotas mais longas
+                    time: calculateTime(distance * 1.26, 12), // Velocidade média do ônibus
+                    cost: busFare
+                },
+                uber: {
+                    distance: distance,
+                    time: calculateTime(distance, 22), // Velocidade média do carro
+                    cost: calculateRideCost(distance, 1.50, 5.0) // R$ 1.50/km + taxa fixa
+                },
+                "uber-moto": {
+                    distance: distance,
+                    time: calculateTime(distance, 26), // Moto é mais rápida
+                    cost: calculateRideCost(distance, 0.90, 3.0) // Mais barato que Uber comum
+                },
+                app99: {
+                    distance: distance,
+                    time: calculateTime(distance, 20),
+                    cost: calculateRideCost(distance, 1.55, 5.5)
+                },
+                indrive: {
+                    distance: distance,
+                    time: calculateTime(distance, 21),
+                    cost: calculateRideCost(distance, 1.40, 4.8)
+                },
+                car: {
+                    distance: distance,
+                    time: calculateTime(distance, 23),
+                    cost: calculateCarCost(distance, fuelPrice, carConsumption)
+                },
+                taxi: {
+                    distance: distance,
+                    time: calculateTime(distance, 22),
+                    cost: calculateRideCost(distance, 2.50, 8.0) // Taxi mais caro
+                }
+            };
+            
+            // Atualizar resultados na interface
+            for (const transport in transportData) {
+                const data = transportData[transport];
+                document.getElementById(`${transport}-distance`).textContent = `${data.distance.toFixed(1)} km`;
+                document.getElementById(`${transport}-time`).textContent = formatTime(data.time);
+                document.getElementById(`${transport}-cost`).textContent = `R$ ${data.cost.toFixed(2)}`;
+            }
+            
+            // Encontrar a opção mais econômica
+            let minCost = Infinity;
+            let bestTransport = null;
+            
+            for (const transport in transportData) {
+                if (transportData[transport].cost < minCost) {
+                    minCost = transportData[transport].cost;
+                    bestTransport = transport;
+                }
+            }
+            
+            // Remover destaque de todos
+            document.querySelectorAll('.result-item').forEach(item => {
+                item.classList.remove('winner');
+            });
+            
+            // Destacar o vencedor
+            if (bestTransport) {
+                const winnerElement = document.querySelector(`.${bestTransport}`);
+                if (winnerElement) {
+                    winnerElement.classList.add('winner');
+                    
+                    // Atualizar mensagem do vencedor
+                    const winnerName = winnerElement.querySelector('.result-title').textContent;
+                    document.getElementById('winner-name').textContent = winnerName;
+                    document.getElementById('winner-cost').textContent = `R$ ${minCost.toFixed(2)}`;
+                }
+            }
+        }
+        
+        function calculateTime(distance, speed) {
+            // Tempo em minutos = (distância / velocidade) * 60
+            return (distance / speed) * 60;
+        }
+        
+        function formatTime(minutes) {
+            const hours = Math.floor(minutes / 60);
+            const mins = Math.round(minutes % 60);
+            return hours > 0 ? `${hours}h ${mins}min` : `${mins} min`;
+        }
+        
+        function calculateRideCost(distance, ratePerKm, baseRate) {
+            // Custo = taxa base + (distância * taxa por km)
+            return baseRate + (distance * ratePerKm);
+        }
+        
+        function calculateCarCost(distance, fuelPrice, consumption) {
+            // Custo = (distância / consumo) * preço do combustível
+            return (distance / consumption) * fuelPrice;
+        }
+        
+        // Função para mostrar sugestões de endereço
+        function showSuggestions(input, suggestionsId) {
+            const inputValue = input.value.toLowerCase();
+            const suggestions = document.getElementById(suggestionsId);
+            
+            if (inputValue.length < 3) {
+                suggestions.style.display = 'none';
+                return;
+            }
+            
+            // Filtrar locais de Salvador
+            const filtered = salvadorLocations.filter(location => 
+                location.toLowerCase().includes(inputValue)
+            );
+            
+            if (filtered.length > 0) {
+                suggestions.innerHTML = '';
+                filtered.forEach(location => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    div.textContent = location;
+                    div.addEventListener('click', () => {
+                        input.value = location;
+                        suggestions.style.display = 'none';
+                    });
+                    suggestions.appendChild(div);
+                });
+                suggestions.style.display = 'block';
+            } else {
+                suggestions.style.display = 'none';
+            }
+        }
+        
+        // Inicializar o mapa e adicionar eventos
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+            calculateTransport();
+            
+            // Adicionar evento ao botão de cálculo
+            document.getElementById('calculate-btn').addEventListener('click', calculateTransport);
+            
+            // Adicionar evento para Enter nos campos de endereço
+            document.getElementById('origin').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') document.getElementById('route-btn').click();
+            });
+            
+            document.getElementById('destination').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') document.getElementById('route-btn').click();
+            });
+            
+            // Eventos para sugestões de endereço
+            document.getElementById('origin').addEventListener('input', function() {
+                showSuggestions(this, 'origin-suggestions');
+            });
+            
+            document.getElementById('destination').addEventListener('input', function() {
+                showSuggestions(this, 'destination-suggestions');
+            });
+            
+            // Fechar sugestões ao clicar fora
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.form-group')) {
+                    document.querySelectorAll('.suggestions').forEach(el => {
+                        el.style.display = 'none';
+                    });
+                }
+            });
+            
+            // Eventos para tags de locais
+            document.querySelectorAll('.location-tag').forEach(tag => {
+                tag.addEventListener('click', function() {
+                    const location = this.getAttribute('data-location');
+                    const originInput = document.getElementById('origin');
+                    const destinationInput = document.getElementById('destination');
+                    
+                    // Alternar entre origem e destino
+                    if (originInput.value === '') {
+                        originInput.value = location;
+                    } else if (destinationInput.value === '') {
+                        destinationInput.value = location;
+                    } else {
+                        // Se ambos já preenchidos, substituir o destino
+                        destinationInput.value = location;
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
